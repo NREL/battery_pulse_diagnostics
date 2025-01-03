@@ -1,0 +1,13 @@
+*.csv
+*.h5
+*.pyc
+*.ipynb_checkpoints
+.vscode
+*.json
+data
+results
+*.pkl
+*.npy
+*.npz
+_*
+*.png
