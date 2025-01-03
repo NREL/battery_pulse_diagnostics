@@ -13,6 +13,8 @@ $ conda activate battery_pulse_diagnostics
 NOTE: May need to run $ pip install --upgrade pandas "dask[complete]" $ for tsfresh to work.
 
 ## Data preprocessing
+The processed and raw data can be downloaded from Zenodo: [https://doi.org/10.5281/zenodo.14597394](https://doi.org/10.5281/zenodo.14597394).
+
 Raw electrochemical characterization test data was processed using the following scripts:
 1. scripts/01_process_data.py (Raw files processed by this script are not included; this script generates the 'data_raw.h5' data base used by further processing scripts)
 2. scripts/02_extract_pulses.py
@@ -25,6 +27,7 @@ Raw electrochemical characterization test data was processed using the following
     * data/
         * data_raw.h5
         * data_for_ml.h5
+        * data_for_ml_extracted_features.h5
         * features_pulse_hppc.csv
         * features_pulse_rapid.csv
         * features_pulse_psrp1.csv
