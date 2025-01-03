@@ -4,7 +4,7 @@ from pathlib import Path
 import time
 import torch
 from tsfresh import extract_features
-
+import sys
 
 def stack_df(df):
     voltages = df.filter(regex="voltage")
@@ -104,6 +104,7 @@ def format_extracted_features(
 
 
 if __name__ == "__main__":
+    sys.path.append("../")
 
     data = pd.HDFStore("data/data_for_ml.h5")
 

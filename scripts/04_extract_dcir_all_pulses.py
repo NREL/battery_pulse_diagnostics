@@ -3,6 +3,9 @@ import numpy as np
 import utils.data_utils as utils
 import re
 
+import sys
+sys.path.append("../")
+
 hdf = pd.HDFStore("data/data_raw.h5", mode="r")
 keys = hdf.keys()
 
@@ -105,6 +108,6 @@ for ii, key in enumerate(keys):
                         output["temperature_ambient"] += [temp] * n_pulses
                         output["cell_id"] += [cell_id_prefix + cell_id_num] * n_pulses
 
-            pd.DataFrame(output).to_csv("data/features_dcir_no_interpolation_redo.csv")
+            pd.DataFrame(output).to_csv("data/features_dcir_no_interpolation.csv")
 
 hdf.close()

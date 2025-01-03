@@ -3,6 +3,9 @@ import numpy as np
 import utils.data_utils as utils
 import re
 
+import sys
+sys.path.append("../")
+
 hdf = pd.HDFStore("data/data_raw.h5", mode="r")
 keys = hdf.keys()
 

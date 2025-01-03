@@ -5,6 +5,8 @@ import re
 from scipy.integrate import trapz
 from scipy.optimize import curve_fit
 
+import sys
+sys.path.append("../")
 
 def exponential_relaxation(x, A, tau, C):
     return A * np.exp(-x / tau) + C

@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 from utils.data_utils import join_targets_to_features
 
+import sys
+sys.path.append("../")
+
 # Features
 features_dcir = pd.read_csv("data/features_dcir_no_interpolation.csv")
 features_static_hppc = pd.read_csv("data/features_pulse_hppc.csv")
@@ -42,7 +45,7 @@ for feature_key in features_raw:
     )
 
     # Check if the output file has already been created
-    is_hdf = any(["data/data_for_ml.h5" in key for key in os.listdir(Path())])
+    is_hdf = any(["data_for_ml.h5" in key for key in os.listdir(Path('data'))])
 
     # Write to HDF5 database
     if not is_hdf:

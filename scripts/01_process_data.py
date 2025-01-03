@@ -4,6 +4,9 @@ import os
 import numpy as np
 import scipy as sci
 
+import sys
+sys.path.append("../")
+
 fpath = Path("Data files")
 new_fpath = fpath / "processed"
 files = os.listdir(fpath)
