@@ -1,0 +1,3 @@
+- The pseudo-random pulse for the 'C/2 PsRP_1 discharge' was scripted incorrectly, and slightly changes the average current of the pulse (and is not the exact opposite of the 'C/2 PsRP_1 charge' pulse). This was noticed after collecting many measurements, so it was decided to simply keep the error so that all characterization tests are consistent.
+- Leaf cells have 1 mV resolution voltage measurements in addition to the 10 mV resolution channel voltage. For some Leaf cells, these 1 mV resolution voltage channels recorded very noisy data that cannot be used.
+- The 'C_..._chain' tests do not do the full C/2 charge after the 'charge sustaining' drive cycle, accidentally skipping the intended discharge.    

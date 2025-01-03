@@ -1,0 +1,1 @@
+Gasper, Paul, Schiek, Andrew, Smith, Kandler, Shimonishi, Yuta, & Yoshida, Shuhei. (2022). Predicting battery capacity from impedance at varying temperature and state of charge using machine learning. Cell Reports Physical Science, 3 (12) 101184. http://doi.org/10.1016/j.xcrp.2022.101184.
