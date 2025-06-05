@@ -4,9 +4,9 @@ Using rapid DC pulse sequences to predict SOC, discharge capacity, and safety me
 
 This analysis uses electrochemical, X-ray CT, and physical characterization to collect various features (DC pulse sequences) and targets (capacity, drive cycle performance, state-of-charge, safety related metrics) to train machine learning models, quantifying the ability for DC pulse sequences to be used to estimate the state of commercial Li-ion batteries. 4 different types of commercial lithium-ion batteries were tested after lab- and field-aging, with electrochemical measurements recorded at 3 operating temperatures.
 
-![Electrochemical characterization](/assets/data.jpeg)
+![Electrochemical characterization](/assets/echem.jpg)
 
-![Data set overview](/assets/data set overview.jpeg)
+![Data set overview](/assets/dataset.jpg)
 
 ## Setup
 
