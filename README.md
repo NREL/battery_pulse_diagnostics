@@ -51,3 +51,8 @@ Another approach studied was extracting timeseries features using the `tsfresh` 
 
 ## Model fitting
 There are two main scripts for model fitting. `run_kfoldcv.py` runs KFold cross-validation and is set up to compare multiple models including PLSR, XGBoost, and several neural network architectures. KFold CV is used due to the computational cost of each model run, in particular for the neural network models. `run_bootstrap_xgboost.py` runs an XGBoost model with repeated random train/test sampling, as the lower complexity of XGBoost allows for more model runs. Results are saved in the 'results/' directory and code visualizing the results is reported in the 'notebooks/' directory.
+
+## Authors
+Code development: Paul Gasper, Nina Prakash
+Data acquisition: Paul Gasper, Bryce Knutson, Thomas Bethel, Amariah Condon
+Analysis: Paul Gasper, Nina Prakash, Bryce Knutson, Peter Attia
