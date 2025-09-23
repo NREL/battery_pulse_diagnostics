@@ -190,12 +190,12 @@ def load_data(filename: str = "data_for_ml.h5", cell_type: str = None):
                 )
 
         # Make Excess electrolyte categorical
-        le = LabelEncoder()
-        mask = tests[test]["Excess electrolyte"].isna()
-        tests[test]["Excess electrolyte"] = le.fit_transform(
-            tests[test]["Excess electrolyte"]
-        )
-        tests[test]["Excess electrolyte"][mask] = np.nan
+        # le = LabelEncoder()
+        # mask = tests[test]["Excess electrolyte"].isna()
+        # tests[test]["Excess electrolyte"] = le.fit_transform(
+        #     tests[test]["Excess electrolyte"]
+        # )
+        # tests[test]["Excess electrolyte"][mask] = np.nan
 
         # Add C/3 discharge * SOC target
         c_3_discharge = tests[test]["C/3 discharge capacity"]

@@ -50,41 +50,41 @@ if __name__ == "__main__":
     #######################################################
 
     pulses = [
-        "Static Rapid",
+        # "Static Rapid",
         "Static HPPC",
-        "Static PsRP 1",
-        "Static PsRP 2 Chg",
-        "Static PsRP 2 Dis",
+        # "Static PsRP 1",
+        # "Static PsRP 2 Chg",
+        # "Static PsRP 2 Dis",
         "Dynamic PsRP 1 C/2",
-        "Dynamic PsRP 2 1C",
-        "Dynamic PsRP 1 1C",
-        "Dynamic PsRP 2 C/2",
-        "DCIR",
+        # "Dynamic PsRP 2 1C",
+        # "Dynamic PsRP 1 1C",
+        # "Dynamic PsRP 2 C/2",
+        # "DCIR",
     ]
 
     targets = [
-        "1C discharge capacity",
-        "C/10 discharge capacity",
-        "C/5 discharge capacity",
+        # "1C discharge capacity",
+        # "C/10 discharge capacity",
+        # "C/5 discharge capacity",
         "C/3 discharge capacity",
-        "C/2 discharge capacity",
-        "P/3 discharge capacity",
-        "Charge depleting cycle charge throughput",
-        "Charge sustaining cycle charge efficiency",
+        # "C/2 discharge capacity",
+        # "P/3 discharge capacity",
+        # "Charge depleting cycle charge throughput",
+        # "Charge sustaining cycle charge efficiency",
         "soc",
-        "Post 1C charge relaxation fit MSE",
-        "1C discharge capacity_3bins",
-        "Post 1C charge relaxation fit MSE_outlier",
-        "C/3 discharge capacity_3bins",
-        "Post C/2 charge relaxation fit MSE_outlier",
-        "Post 1C or Post C/2_outlier",
-        "Post 1C charge relaxation fit Max Error",
-        "Post 1C charge relaxation fit Max Error_outlier",
-        "Cell volume",
-        "Electrode stack thickness",
-        "Excess electrolyte",
-        "Volume growth",
-        "Thickness growth",
+        # "Post 1C charge relaxation fit MSE",
+        # "1C discharge capacity_3bins",
+        # "Post 1C charge relaxation fit MSE_outlier",
+        # "C/3 discharge capacity_3bins",
+        # "Post C/2 charge relaxation fit MSE_outlier",
+        # "Post 1C or Post C/2_outlier",
+        # "Post 1C charge relaxation fit Max Error",
+        # "Post 1C charge relaxation fit Max Error_outlier",
+        # "Cell volume",
+        # "Electrode stack thickness",
+        # "Excess electrolyte",
+        # "Volume growth",
+        # "Thickness growth",
     ]
 
     for cell_type in ["A", "B", "C", "D"]:
@@ -191,13 +191,16 @@ if __name__ == "__main__":
                         y_train = le.fit_transform(train[target])
                         xgb = XGBClassifier(scale_pos_weight=scale_pos_weight).fit(
                             train.filter(regex=regex),
+                            # train_filter, # Use this line instead to run baseline model
                             y_train,
                             sample_weight=sample_weights,
                         )
                         preds = xgb.predict(test.filter(regex=regex))
+                        # preds = xgb.predict(test_filter) # Use this line instead to run baseline model
                         if return_classification_probabilities:
                             preds = prob_class1 = xgb.predict_proba(
                                 test.filter(regex=regex)
+                                # test_filter # Use this line instead to run baseline model
                             )[:, 1]
                         else:
                             preds = le.inverse_transform(preds)
@@ -206,8 +209,11 @@ if __name__ == "__main__":
                         xgb = XGBRegressor().fit(
                             train.filter(regex=regex),
                             train[target],
+                            # train_filter, # Use this line instead to run baseline model
+                            
                         )
                         preds = xgb.predict(test.filter(regex=regex))
+                        # preds = xgb.predict(test_filter) # Use this line instead to run baseline model
 
                     # Save predicted value per cell
                     test_cells = test[["sample_id"]]
