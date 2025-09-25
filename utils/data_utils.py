@@ -1564,6 +1564,132 @@ def get_after_charge_rests(df):
     dfs = get_segment_parts(df[is_pulse])
     return dfs
 
+# get 10 min segments from the charge sustaining cycle
+def get_10_min_segments(df):
+    t_length = 599 # for whatever reason, the sequence is 599 seconds long, not 600
+    df_segments = []
+    _df_ = df.copy().reset_index(drop=True)
+    _df_ = retime(_df_)
+    _df_['Segment Time, S'] = _df_['Segment Time, S'].to_numpy().round().astype(int)
+    t_start = 0
+    t_end = 599
+    discontinous = False
+    while t_end < _df_['Segment Time, S'].max():
+        _df_segment = retime(_df_[(_df_['Segment Time, S'] >= t_start) & (_df_['Segment Time, S'] < t_end)])
+        if len(_df_segment) == t_length:
+            df_segments.append(_df_segment)
+        elif len(_df_segment) > t_length:
+            #extra data points, remove everything with a decimal in the segment time
+            _df_segment = _df_segment[_df_segment['Segment Time, S'] % 1 == 0]
+            if len(_df_segment) == t_length:
+                print(f"removed extra data in segment starting at {t_start} seconds")
+                df_segments.append(_df_segment)
+            else:
+                print(f"found extra data in 10 min segment starting at {t_start} seconds, unable to remove")
+        else:
+            print(f"found short segment starting at {t_start} seconds, only {len(_df_segment)} data points")
+        t_start += t_length
+        t_end += t_length
+    return df_segments
+
+def get_charge_depleting_cycle(df):
+    # For a measurement, return collated data from the charge-depleting cycle
+    if any(["Cell Voltage A1" in col for col in df.columns]):
+        col_voltage = "Cell Voltage A1, V"
+    else:
+        col_voltage = "Voltage, V"
+
+    is_cycle = [
+        "Charge depleting cycle" in seg_desc for seg_desc in df["Segment Description"]
+    ]
+
+    #split the repeating charge depleting cycles into individual 10 min cycles
+    dfs = get_10_min_segments(df[is_cycle])
+    time = dfs[0]['Segment Time, S']
+
+    # mask_priorvoltage = [False] * len(is_cycle) # not sure this is needed
+    # len(is_cycle) - len(mask_priorvoltage)
+
+    for i, t in enumerate(time):
+        if i == 0:
+            # columns_soc = ["soc_%5.1fs" % (t)]
+            columns_voltage = ["voltage_%5.1fs" % (t)]
+            columns_current = ["current_%5.1fs" % (t)]
+            columns_power = ["power_%5.1fs" % (t)]
+        else:
+            # columns_soc += ["soc_%5.1fs" % (t)]
+            columns_voltage += ["voltage_%5.1fs" % (t)]
+            columns_current += ["current_%5.1fs" % (t)]
+            columns_power += ["power_%5.1fs" % (t)]
+
+    for i, df_seg in enumerate(dfs):
+        if i == 0:
+            soc_mean = df_seg.SOC.to_numpy().mean()
+            soc_initial = df_seg.SOC.to_numpy()[0]
+            soc_final = df_seg.SOC.to_numpy()[-1]
+            temperature = np.mean(df_seg["Temperature A1, °C"].to_numpy())
+            voltage = df_seg[col_voltage].to_numpy()
+            current = df_seg["Current, A"].to_numpy()
+            power = df_seg["Power, W"].to_numpy()
+        else:
+            soc_mean = np.vstack((soc_mean, df_seg.SOC.to_numpy().mean()))
+            soc_initial = np.vstack((soc_initial, df_seg.SOC.to_numpy()[0]))
+            soc_final = np.vstack((soc_final, df_seg.SOC.to_numpy()[-1]))
+            temperature = np.vstack((temperature, np.mean(df_seg["Temperature A1, °C"].to_numpy())))
+            voltage = np.vstack((voltage, df_seg[col_voltage].to_numpy()))
+            current = np.vstack((current, df_seg["Current, A"].to_numpy()))
+            power = np.vstack((power, df_seg["Power, W"].to_numpy()))
+
+    out = np.hstack((temperature, soc_mean, soc_initial, soc_final, voltage, current, power))
+    columns = (["temperature", "soc_mean", "soc_initial", "soc_final"] + columns_voltage + columns_current + columns_power)
+
+    df_out = pd.DataFrame(out, columns=columns)
+    
+    return df_out
+
+def get_charge_sustaining_cycle(df):
+    # For a measurement, return collated data from the charge-sustaining cycle
+
+    if any(["Cell Voltage A1" in col for col in df.columns]):
+        col_voltage = "Cell Voltage A1, V"
+    else:
+        col_voltage = "Voltage, V"
+
+    is_cycle = [
+        "Charge sustaining cycle" in seg_desc for seg_desc in df["Segment Description"]
+    ]
+
+    df_seg = df[is_cycle]
+    time = df_seg['Segment Time, S']
+
+    # mask_priorvoltage = [False] * len(is_cycle) # not sure this is needed
+    # len(is_cycle) - len(mask_priorvoltage)
+
+    for i, t in enumerate(time):
+        if i == 0:
+            columns_voltage = ["voltage_%5.1fs" % (t)]
+            columns_current = ["current_%5.1fs" % (t)]
+            columns_power = ["power_%5.1fs" % (t)]
+        else:
+            columns_voltage += ["voltage_%5.1fs" % (t)]
+            columns_current += ["current_%5.1fs" % (t)]
+            columns_power += ["power_%5.1fs" % (t)]
+
+
+    soc_mean = df_seg.SOC.to_numpy().mean()
+    soc_initial = df_seg.SOC.to_numpy()[0]
+    soc_final = df_seg.SOC.to_numpy()[-1]
+    temperature = np.mean(df_seg["Temperature A1, °C"].to_numpy())
+    voltage = df_seg[col_voltage].to_numpy()
+    current = df_seg["Current, A"].to_numpy()
+    power = df_seg["Power, W"].to_numpy()
+
+
+    out = np.hstack((temperature, soc_mean, soc_initial, soc_final, voltage, current, power))
+    columns = (["temperature", "soc_mean", "soc_initial", "soc_final"] + columns_voltage + columns_current + columns_power)
+    df_out = pd.Series(out, index=columns)
+
+    return pd.DataFrame([df_out])
 
 def join_targets_to_features(features_raw, targets_raw_all):
     # Append all targets to the feature data, joining by "measurement_id"
