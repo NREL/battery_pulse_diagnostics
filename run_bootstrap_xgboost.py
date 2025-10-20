@@ -12,7 +12,7 @@ from xgboost import XGBRegressor, XGBClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import class_weight
 
-from utils.data_utils import load_data, filter_relevant_extracted_features
+from utils.data_utils import load_data, load_partial_charge_data, filter_relevant_extracted_features
 from utils.modeling_utils import is_classification_target
 
 import warnings
@@ -28,7 +28,8 @@ RANDOM_STATE = 42
 if __name__ == "__main__":
 
     ################# User Parameters ####################
-    filename_raw_features = "data/data_for_ml.h5"
+    # filename_raw_features = "data/data_for_ml.h5"
+    filename_raw_features = "data/data_partial_charge_for_ml.h5"
     filename_extracted_features = "data/data_for_ml_extracted_features.h5"
     test_size = 0.20
 
@@ -62,16 +63,28 @@ if __name__ == "__main__":
         # "DCIR",
     ]
 
+    partial_charge_pulses = [
+        "Charge_Depleting",
+        "Charge_Sustaining",
+        "Rate_Test_C/2",
+        "Rate_Test_1C",
+        "PsRP_1_C/2",
+        "PsRP_1_1C",
+        "PsRP_2_C/2",
+        "PsRP_2_1C",
+    ]
+
     targets = [
         # "1C discharge capacity",
         # "C/10 discharge capacity",
         # "C/5 discharge capacity",
-        "C/3 discharge capacity",
+        # "C/3 discharge capacity",
         # "C/2 discharge capacity",
         # "P/3 discharge capacity",
         # "Charge depleting cycle charge throughput",
         # "Charge sustaining cycle charge efficiency",
-        "soc",
+        # "soc",
+        "soc_mean", # soc mean is only a partial charge target
         # "Post 1C charge relaxation fit MSE",
         # "1C discharge capacity_3bins",
         # "Post 1C charge relaxation fit MSE_outlier",
@@ -87,16 +100,17 @@ if __name__ == "__main__":
         # "Thickness growth",
     ]
 
-    for cell_type in ["A", "B", "C", "D"]:
+    for cell_type in ["C"]:#, "B", "C", "D"]:
 
         # Save results as a dictionary
         bootstrap_results = dict()
 
-        tests = load_data(filename=filename_raw_features, cell_type=cell_type)
+        # tests = load_data(filename=filename_raw_features, cell_type=cell_type)
+        tests = load_partial_charge_data(filename=filename_raw_features, cell_type=cell_type)
 
         for target in targets:
 
-            for pulse in pulses:
+            for pulse in partial_charge_pulses:
                 print(pulse, ", ", target)
 
                 r2s = []
@@ -119,9 +133,19 @@ if __name__ == "__main__":
                 ]
                 results = df.loc[:, list(~df.columns.isin(targets + unwanted_cols))]
                 results = results.filter(
-                    regex=r"^(?!{}*)".format("voltage|polarization|current")
+                    regex=r"^(?!{}*)".format("voltage|polarization|current|power")
                 )
                 results[target] = df[target]
+
+                if pulse == "Charge_Depleting" or pulse == "Charge_Sustaining":
+                    # these pulses already have a designated train/test split
+                    # train_fixed = df[df["split_type"] == "training"].groupby(by='measurement_id').sample(frac=0.1, random_state=RANDOM_STATE+i)
+                    train_fixed = df[df["split_type"] == "training"]
+                    idx_test_fixed = df[df["split_type"] == "testing"].index.to_numpy()
+                    fixed = True
+                else:
+                    fixed = False
+
 
                 # Keep measurement IDs together when splitting
                 splitter = GroupShuffleSplit(
@@ -133,7 +157,12 @@ if __name__ == "__main__":
                 ):
                     if i % print_freq == 0:
                         print("\tBootstrap iteration ", i)
-                    train, test = df.iloc[idx_train], df.iloc[idx_test]
+                    if fixed:
+                        # For partial charge pulses, use the fixed train/test split
+                        # but randomly select 10% of the training data each iteration
+                        idx_train = train_fixed.groupby(by='measurement_id').sample(frac=0.1, random_state=RANDOM_STATE+i).index.to_numpy()
+                        idx_test = idx_test_fixed
+                    train, test = df.loc[idx_train], df.loc[idx_test]
 
                     if not raw_features:
                         # Fitting on TSFresh extracted features. Filter only the
@@ -171,7 +200,7 @@ if __name__ == "__main__":
                         if pulse == 'DCIR':
                             regex="voltage|0p1s|1s|4s|10s|V0|temperature_ambient_f"
                         else:
-                            regex="voltage|P/I|polarization|current|temperature"
+                            regex="voltage|P/I|polarization|current|temperature|power"
 
                     # Fit and predict
                     if is_classification_target(target):
@@ -239,5 +268,5 @@ if __name__ == "__main__":
 
                 torch.save(
                     bootstrap_results,
-                    f"results/bootstrap_results_{cell_type}.pth",
+                    f"results/partial_charge/soc_prediction2/bootstrap_results_{cell_type}.pth",
                 )
