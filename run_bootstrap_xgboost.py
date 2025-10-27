@@ -81,10 +81,10 @@ if __name__ == "__main__":
         # "C/3 discharge capacity",
         # "C/2 discharge capacity",
         # "P/3 discharge capacity",
-        # "Charge depleting cycle charge throughput",
-        # "Charge sustaining cycle charge efficiency",
+        "Charge depleting cycle charge throughput",
+        "Charge sustaining cycle charge efficiency",
         # "soc",
-        "soc_mean", # soc mean is only a partial charge target
+        # "soc_mean", # soc mean is only a partial charge target
         # "Post 1C charge relaxation fit MSE",
         # "1C discharge capacity_3bins",
         # "Post 1C charge relaxation fit MSE_outlier",
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         # "Thickness growth",
     ]
 
-    for cell_type in ["C"]:#, "B", "C", "D"]:
+    for cell_type in ["D"]: #"A", "B", "C", "D"]:
 
         # Save results as a dictionary
         bootstrap_results = dict()
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         for target in targets:
 
             for pulse in partial_charge_pulses:
-                print(pulse, ", ", target)
+                print(cell_type, ", ", pulse, ", ", target)
 
                 r2s = []
                 maes = []
@@ -174,10 +174,10 @@ if __name__ == "__main__":
                             features_selected.append(train.columns)
 
                     # Add instantaneous resistance feature
-                    for p in train.filter(regex="polarization"):
-                        time = p.split("_")[-1]
-                        train[f"P/I_{time}"] = train[p] / train[f"current_{time}"]
-                        test[f"P/I_{time}"] = test[p] / test[f"current_{time}"]
+                    # for p in train.filter(regex="polarization"):
+                    #     time = p.split("_")[-1]
+                    #     train[f"P/I_{time}"] = train[p] / train[f"current_{time}"]
+                    #     test[f"P/I_{time}"] = test[p] / test[f"current_{time}"]
                     train = train.replace([np.inf, -np.inf], 0)
                     test = test.replace([np.inf, -np.inf], 0)
                     train = train.replace(np.nan, 0)
@@ -200,7 +200,7 @@ if __name__ == "__main__":
                         if pulse == 'DCIR':
                             regex="voltage|0p1s|1s|4s|10s|V0|temperature_ambient_f"
                         else:
-                            regex="voltage|P/I|polarization|current|temperature|power"
+                            regex="voltage|current|temperature|power"
 
                     # Fit and predict
                     if is_classification_target(target):
@@ -268,5 +268,5 @@ if __name__ == "__main__":
 
                 torch.save(
                     bootstrap_results,
-                    f"results/partial_charge/soc_prediction2/bootstrap_results_{cell_type}.pth",
+                    f"results/partial_charge/us06_fcr_cycle/bootstrap_results_{cell_type}.pth",
                 )
