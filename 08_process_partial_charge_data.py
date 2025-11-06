@@ -16,6 +16,8 @@ features_psrp_1_Cb2 = pd.read_csv("data/features_partial_charge_psrp_1_C2_charge
 features_psrp_1_1C = pd.read_csv("data/features_partial_charge_psrp_1_1C_charge.csv")
 features_psrp_2_Cb2 = pd.read_csv("data/features_partial_charge_psrp_2_C2_charge.csv")
 features_psrp_2_1C = pd.read_csv("data/features_partial_charge_psrp_2_1C_charge.csv")
+features_charge_sustaining_time_variable = pd.read_pickle("data/features_partial_charge_sustaining_cycle_time_variable.pkl")
+features_psrp_2_C2_time_variable = pd.read_pickle("data/features_partial_charge_psrp_2_C2_charge_time_variable.pkl")
 
 # dictionary of keys for dataframes in h5 file
 features_raw = {
@@ -27,6 +29,8 @@ features_raw = {
     "PsRP_1_1C": features_psrp_1_1C,
     "PsRP_2_C/2": features_psrp_2_Cb2,
     "PsRP_2_1C": features_psrp_2_1C,
+    "Charge_Sustaining_Time_Variable": features_charge_sustaining_time_variable,
+    "PsRP_2_C/2_Time_Variable": features_psrp_2_C2_time_variable
 }
 
 # Targets

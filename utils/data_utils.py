@@ -2056,6 +2056,299 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
 
     return df_out
 
+def get_charge_sustaining_cycle_time_variable(df, cell_id_prefix):
+    if any(["Cell Voltage A1" in col for col in df.columns]):
+        col_voltage = "Cell Voltage A1, V"
+    else:
+        col_voltage = "Voltage, V"
+
+    is_cycle = [
+        "Charge sustaining cycle" in seg_desc for seg_desc in df["Segment Description"]
+    ]
+
+    df_seg = df[is_cycle]
+    # time = df_seg['Segment Time, S']
+    time = retime(df_seg)['Segment Time, S']
+
+    # mask_priorvoltage = [False] * len(is_cycle) # not sure this is needed
+    # len(is_cycle) - len(mask_priorvoltage)
+
+    
+
+    if cell_id_prefix.startswith('A') or cell_id_prefix.startswith('B'):
+        # voltage resolution is every 1 sec
+        resolution = 1
+    else: 
+        # voltage resolution is every 4 secs
+        resolution = 4
+
+    # check for large gaps in time data, or extra data points
+    for i in range(len(time)-1):
+        if time[i+1] - time[i] > resolution + 0.1:
+            print(f"Large time gap found in charge sustaining cycle, check data quality")
+            return None
+        elif time[i+1] - time[i] < resolution - 0.1:
+            print(f"Extra time data found in charge sustaining cycle, removing data")
+            mask_keep = df_seg['Segment Time, S'] % resolution == 0
+            df_seg = df_seg[mask_keep]
+            df_seg = retime(df_seg)
+
+    segment_lengths = {
+        "fifteen_mins": int(900 / resolution),
+        "thirty_mins": int(1800 / resolution),
+        "fortyfive_mins": int(2700 / resolution),
+        "sixty_mins": int(3600 / resolution)
+    }
+
+    segs_15 = []
+    segs_30 = []
+    segs_45 = []
+    segs_60 = []
+
+    df_segments = [
+        segs_15,
+        segs_30,
+        segs_45,
+        segs_60
+    ]
+
+
+    # # save last 30 mins (1800s) of data separately
+    # thirty_mins = int(1800 / resolution)
+    # df_testing = retime(df_seg[-thirty_mins:])
+
+    # df_seg.drop(df_seg.index[-thirty_mins:], inplace=True)
+    # df_seg.reset_index(drop=True, inplace=True)
+    # df_seg = retime(df_seg)
+    for (j, df_time_samples), (key, length) in zip(enumerate(df_segments), segment_lengths.items()):
+        for i in range(5):
+            start_time = np.random.randint(0, len(df_seg) - length) # random start time for segment
+            df_segment = df_seg[start_time:start_time + length]
+            df_segment.reset_index(drop=True, inplace=True)
+            df_segment["segment_length"] = key
+            df_time_samples += [df_segment]
+
+        # time = df_testing['Segment Time, S'] - (df_testing['Segment Time, S'].iloc[0]) # reset time to start from 0
+        time = df_time_samples[-1]['Segment Time, S'] - (df_time_samples[-1]['Segment Time, S'].iloc[0]) # reset time to start from 0
+
+        for i, t in enumerate(time):
+            if i == 0:
+                # columns_soc = ["soc_%5.1fs" % (t)]
+                columns_voltage = ["voltage_%5.1fs" % (t)]
+                columns_current = ["current_%5.1fs" % (t)]
+                columns_power = ["power_%5.1fs" % (t)]
+            else:
+                # columns_soc += ["soc_%5.1fs" % (t)]
+                columns_voltage += ["voltage_%5.1fs" % (t)]
+                columns_current += ["current_%5.1fs" % (t)]
+                columns_power += ["power_%5.1fs" % (t)]
+
+        # soc = df_seg.SOC.to_numpy()
+        
+
+        for i, row in enumerate(df_time_samples):
+            if i == 0:
+                soc_mean = row.SOC.to_numpy().mean()
+                soc_initial = row.SOC.to_numpy()[0]
+                soc_final = row.SOC.to_numpy()[-1]
+                temperature = np.mean(row["Temperature A1, °C"].to_numpy())
+                voltage = row[col_voltage].to_numpy()
+                current = row["Current, A"].to_numpy()
+                power = row["Power, W"].to_numpy()
+                segment_length = [row["segment_length"].iloc[0]]
+            else:
+                soc_mean = np.vstack((soc_mean, row.SOC.to_numpy().mean()))
+                soc_initial = np.vstack((soc_initial, row.SOC.to_numpy()[0]))
+                soc_final = np.vstack((soc_final, row.SOC.to_numpy()[-1]))
+                temperature = np.vstack((temperature, np.mean(row["Temperature A1, °C"].to_numpy())))
+                voltage = np.vstack((voltage, row[col_voltage].to_numpy()))
+                current = np.vstack((current, row["Current, A"].to_numpy()))
+                power = np.vstack((power, row["Power, W"].to_numpy()))
+                segment_length = np.vstack((segment_length, [row["segment_length"].iloc[0]]))
+
+
+        out = np.hstack((temperature, soc_mean, soc_initial, soc_final, segment_length, voltage, current, power))
+        columns = (["temperature", "soc_mean", "soc_initial", "soc_final", "segment_length"] + columns_voltage + columns_current + columns_power)
+        if j == 0:
+            df_out = pd.DataFrame(out, columns=columns)
+        else:
+            df_out = pd.concat([df_out, pd.DataFrame(out, columns=columns)], ignore_index=True)
+
+    return df_out
+
+def get_charge_cycle_time_variable(df, cell_id_prefix, cell_id_num, key):
+
+    # For a measurement, return collated data from the charge cycle
+    if any(["Cell Voltage A1" in col for col in df.columns]):
+        col_voltage = "Cell Voltage A1, V"
+    else:
+        col_voltage = "Voltage, V"
+
+    is_cycle = [
+        key in seg_desc and 'rest' not in seg_desc and 'CV' not in seg_desc for seg_desc in df["Segment Description"]
+    ]
+
+    df_seg = retime(df[is_cycle])
+    
+    # time = df_seg['Segment Time, S']
+    time = retime(df_seg)['Segment Time, S']
+    soc = df_seg.SOC.to_numpy()
+    # temperature = np.mean(df_seg["Temperature A1, °C"].to_numpy())
+    voltage = df_seg[col_voltage].to_numpy()
+    current = df_seg["Current, A"].to_numpy()
+    power = df_seg["Power, W"].to_numpy()
+
+    out = np.vstack((soc, voltage, current, power, time))
+
+    def get_2_closest_cols(df_seg, target_time):
+        times = df_seg['Segment Time, S'].to_numpy()
+        diffs = np.abs(times - target_time)
+        idx_sorted = np.argsort(diffs)
+        return (df_seg.iloc[idx_sorted[0]], df_seg.iloc[idx_sorted[1]])
+
+    #interpolate the data at 1 second intervals
+    for i in range(time[len(time)-1].round().astype(int)):
+        
+        if i == 0:
+            soc_interp = [soc[0]]
+            voltage_interp = [voltage[0]]
+            current_interp = [current[0]]
+            power_interp = [power[0]]
+            time_interp = [i]
+            continue
+
+        time_interp += [i]
+
+        
+        seg_1, seg_2 = get_2_closest_cols(df_seg, i)
+        time_1 = seg_1['Segment Time, S']
+        time_2 = seg_2['Segment Time, S']
+
+        # save the closer of the two points
+        if time_2 < time_1:
+            soc_interp += [seg_2['SOC']]
+            voltage_interp += [seg_2[col_voltage]]
+            current_interp += [seg_2['Current, A']]
+            power_interp += [seg_2['Power, W']]
+        else:
+            soc_interp += [seg_1['SOC']]
+            voltage_interp += [seg_1[col_voltage]]
+            current_interp += [seg_1['Current, A']]
+            power_interp += [seg_1['Power, W']]
+
+        # if the segments are more than 10 seconds apart, panic, there is data missing
+        if (time_2 - time_1 > 10) or (time_1 - time_2 > 10): 
+            print(f"PANIC PANIC {key} PANIC PANIC ")
+
+        # if the two closest points are already at 1 second intervals, just take the closest value
+        # if (time_2 - time_1) == 1:
+        #     if time_2 < time_1: #time 2 is the closest point
+        #         soc_interp += [seg_2['SOC']]
+        #         voltage_interp += [seg_2[col_voltage]] 
+        #         current_interp += [seg_2['Current, A']]
+        #         power_interp += [seg_2['Power, W']]
+        #     else:
+        #         soc_interp += [seg_1['SOC']]
+        #         voltage_interp += [seg_1[col_voltage]] 
+        #         current_interp += [seg_1['Current, A']]
+        #         power_interp += [seg_1['Power, W']]
+        #     continue
+
+        # #if the two points are within 0.3 seconds of each other, take the average
+        # if (time_2 - time_1) < 0.3: 
+        #     soc_interp += [(seg_1['SOC'] + seg_2['SOC']) / 2]
+        #     voltage_interp += [(seg_1[col_voltage] + seg_2[col_voltage]) / 2]
+        #     current_interp += [(seg_1['Current, A'] + seg_2['Current, A']) / 2]
+        #     power_interp += [(seg_1['Power, W'] + seg_2['Power, W']) / 2]
+        #     continue
+        # #finally, if the two closest points are not at 1 second intervals, interpolate
+        # soc_interp += [np.interp(i, time, soc)]
+        # voltage_interp += [np.interp(i, time, voltage)]
+        # current_interp += [np.interp(i, time, current)]
+        # power_interp += [np.interp(i, time, power)]
+
+    segment_lengths = {
+        "fifteen_mins": 900,
+        "thirty_mins": 1800,
+        "fortyfive_mins": 2700,
+        "sixty_mins": 3600
+    }
+
+    segs_15 = []
+    segs_30 = []
+    segs_45 = []
+    segs_60 = []
+
+    df_segments = [
+        segs_15,
+        segs_30,
+        segs_45,
+        segs_60
+    ]
+
+    df_results = []
+
+    
+
+    for (j, df_time_samples), (key, segment_length) in zip(enumerate(df_segments), segment_lengths.items()):
+        if time_interp[-1] < segment_length:
+            print(f"Charge cycle for {cell_id_prefix}_{cell_id_num} is shorter than {segment_length} seconds, skipping")
+            continue
+
+        #decide how many random samples to take from the charge cycle
+        # sample_size = 10 * -(time_interp[-1] // -segment_length) #ceiling division
+        sample_size = 5
+
+        #get sample_size random samples of segment_length seconds from the charge cycle
+        for i in range(sample_size):
+            start_time = np.random.randint(0, len(time_interp) - segment_length)
+
+            voltage_sample = voltage_interp[start_time:start_time + segment_length]
+            current_sample = current_interp[start_time:start_time + segment_length]
+            power_sample = power_interp[start_time:start_time + segment_length]
+            soc_mean = np.mean(soc_interp[start_time:start_time + segment_length])
+            soc_initial = soc_interp[start_time]
+            soc_final = soc_interp[start_time + segment_length - 1]
+            temperature_sample = np.mean(df_seg["Temperature A1, °C"].to_numpy())
+            segment_length_array = [key]
+
+            out = np.hstack((temperature_sample, soc_mean, soc_initial, soc_final, segment_length_array, voltage_sample, current_sample, power_sample))
+
+            # df_out_sample = pd.Series(out, index=columns)
+            if len(out) == segment_length * 3 + 5: # make sure the sample is the correct length
+                df_time_samples += [out]
+            else:
+                print(f"sample {i} is the wrong length, skipping")
+
+            # if i == 0:
+            #     df_out = pd.DataFrame([df_out_sample])
+            # elif len(df_out_sample) == segment_length * 3 + 5: # make sure the sample is the correct length
+            #     df_out = pd.concat([df_out, pd.DataFrame([df_out_sample])], ignore_index=True)
+            # else:
+            #     print(f"sample {i} is the wrong length, skipping")
+
+        columns = (["temperature", "soc_mean", "soc_initial", "soc_final", "segment_length"] +
+            ["voltage_%3.1fs" % (j) for j in range(segment_length)] +
+            ["current_%3.1fs" % (j) for j in range(segment_length)] +
+            ["power_%3.1fs" % (j) for j in range(segment_length)])
+
+        # if j == 0:
+        #     df_out = pd.DataFrame(df_time_samples, columns=columns)
+        # else:
+        #     df_out = pd.concat([df_out, pd.DataFrame(df_time_samples, columns=columns)], ignore_index=True)
+    
+        # df_time_samples = pd.DataFrame(df_time_samples, columns=columns)
+        df_results.append(pd.DataFrame(df_time_samples, columns=columns))
+    # out = np.vstack(df_time_samples)
+
+    for i, df in enumerate(df_results):
+        if i == 0:
+            df_out = df
+        else:
+            df_out = pd.concat([df_out, df], ignore_index=True)
+        
+    return df_out
+
 def join_targets_to_features(features_raw, targets_raw_all):
     # Append all targets to the feature data, joining by "measurement_id"
     cols_keep = [
