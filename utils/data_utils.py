@@ -275,24 +275,29 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
 
     charge_depleting = data.get("Charge_Depleting")
     charge_sustaining = data.get("Charge_Sustaining")
+    charge_sustaining_time_variable = data.get("Charge_Sustaining_Time_Variable")
     rate_test_C2 = data.get("Rate_Test_C/2")
     rate_test_1C = data.get("Rate_Test_1C")
     psrp_1_C2 = data.get("PsRP_1_C/2")
     psrp_1_1C = data.get("PsRP_1_1C")
     psrp_2_C2 = data.get("PsRP_2_C/2")
     psrp_2_1C = data.get("PsRP_2_1C")
+    psrp_2_C2_time_variable = data.get("PsRP_2_C/2_Time_Variable")
 
     if cell_type is not None:
         charge_depleting = filter_cell_type(charge_depleting, cell_type)
         charge_sustaining = filter_cell_type(charge_sustaining, cell_type)
+        charge_sustaining_time_variable = filter_cell_type(charge_sustaining_time_variable, cell_type)
         rate_test_C2 = filter_cell_type(rate_test_C2, cell_type)
         rate_test_1C = filter_cell_type(rate_test_1C, cell_type)
         psrp_1_C2 = filter_cell_type(psrp_1_C2, cell_type)
         psrp_1_1C = filter_cell_type(psrp_1_1C, cell_type)
         psrp_2_C2 = filter_cell_type(psrp_2_C2, cell_type)
         psrp_2_1C = filter_cell_type(psrp_2_1C, cell_type)
+        # psrp_2_C2_time_variable = filter_cell_type(psrp_2_C2_time_variable, cell_type)
 
     charge_sustaining['soc_mean'] = abs(charge_sustaining['soc_mean'])
+    charge_sustaining_time_variable['soc_mean'] = abs(charge_sustaining_time_variable['soc_mean'])
 
     # get 1/10 of the randomized samples for use in the model.
     depleting_testing = charge_depleting[charge_depleting['split_type'] == "testing"]
@@ -318,6 +323,24 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
     psrp_2_1C = psrp_2_1C.groupby(by='measurement_id').sample(frac=0.1, random_state=42)
     psrp_2_1C.reset_index(drop=True, inplace=True)
 
+    #time variable pulses are separated by length of sample
+    charge_sustaining_time_variable_15min = charge_sustaining_time_variable[charge_sustaining_time_variable['segment_length'] == 'fifteen_mins']
+    charge_sustaining_time_variable_30min = charge_sustaining_time_variable[charge_sustaining_time_variable['segment_length'] == 'thirty_mins']
+    charge_sustaining_time_variable_45min = charge_sustaining_time_variable[charge_sustaining_time_variable['segment_length'] == 'fortyfive_mins']  
+    charge_sustaining_time_variable_60min = charge_sustaining_time_variable[charge_sustaining_time_variable['segment_length'] == 'sixty_mins']
+    charge_sustaining_time_variable_15min.reset_index(drop=True, inplace=True)
+    charge_sustaining_time_variable_30min.reset_index(drop=True, inplace=True)
+    charge_sustaining_time_variable_45min.reset_index(drop=True, inplace=True)
+    charge_sustaining_time_variable_60min.reset_index(drop=True, inplace=True)
+    # psrp_2_C2_time_variable_15min = psrp_2_C2_time_variable[psrp_2_C2_time_variable['segment_length'] == 'fifteen_mins']
+    # psrp_2_C2_time_variable_30min = psrp_2_C2_time_variable[psrp_2_C2_time_variable['segment_length'] == 'thirty_mins']
+    # psrp_2_C2_time_variable_45min = psrp_2_C2_time_variable[psrp_2_C2_time_variable['segment_length'] == 'fortyfive_mins']
+    # psrp_2_C2_time_variable_60min = psrp_2_C2_time_variable[psrp_2_C2_time_variable['segment_length'] == 'sixty_mins']
+    # psrp_2_C2_time_variable_15min.reset_index(drop=True, inplace=True)
+    # psrp_2_C2_time_variable_30min.reset_index(drop=True, inplace=True)
+    # psrp_2_C2_time_variable_45min.reset_index(drop=True, inplace=True)
+    # psrp_2_C2_time_variable_60min.reset_index(drop=True, inplace=True)
+
     print(f"charge depleting size: {charge_depleting.shape}")
     print(f"charge sustaining size: {charge_sustaining.shape}")
     print(f"rate test C/2 size: {rate_test_C2.shape}")
@@ -326,6 +349,14 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
     print(f"PsRP 1 1C size: {psrp_1_1C.shape}")
     print(f"PsRP 2 C/2 size: {psrp_2_C2.shape}")
     print(f"PsRP 2 1C size: {psrp_2_1C.shape}")
+    print(f"charge sustaining time variable 15min size: {charge_sustaining_time_variable_15min.shape}")
+    print(f"charge sustaining time variable 30min size: {charge_sustaining_time_variable_30min.shape}")
+    print(f"charge sustaining time variable 45min size: {charge_sustaining_time_variable_45min.shape}")
+    print(f"charge sustaining time variable 60min size: {charge_sustaining_time_variable_60min.shape}")
+    # print(f"PsRP 2 C/2 time variable 15min size: {psrp_2_C2_time_variable_15min.shape}")
+    # print(f"PsRP 2 C/2 time variable 30min size: {psrp_2_C2_time_variable_30min.shape}")
+    # print(f"PsRP 2 C/2 time variable 45min size: {psrp_2_C2_time_variable_45min.shape}")
+    # print(f"PsRP 2 C/2 time variable 60min size: {psrp_2_C2_time_variable_60min.shape}")
     #does this sample 10% of measurement ids? or the intended 10% of random samples
 
     tests = {
@@ -337,6 +368,14 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
         "PsRP_1_1C": psrp_1_1C,
         "PsRP_2_C/2": psrp_2_C2,
         "PsRP_2_1C": psrp_2_1C,
+        "Charge_Sustaining_Time_Variable_15mins": charge_sustaining_time_variable_15min,
+        "Charge_Sustaining_Time_Variable_30mins": charge_sustaining_time_variable_30min,
+        "Charge_Sustaining_Time_Variable_45mins": charge_sustaining_time_variable_45min,
+        "Charge_Sustaining_Time_Variable_60mins": charge_sustaining_time_variable_60min,
+        # "PsRP_2_C/2_Time_Variable_15mins": psrp_2_C2_time_variable_15min,
+        # "PsRP_2_C/2_Time_Variable_30mins": psrp_2_C2_time_variable_30min,
+        # "PsRP_2_C/2_Time_Variable_45mins": psrp_2_C2_time_variable_45min,
+        # "PsRP_2_C/2_Time_Variable_60mins": psrp_2_C2_time_variable_60min,
     }
 
     data.close()
@@ -348,12 +387,12 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
         tests[test]["sample_id"] = tests[test].index
 
         # Add polarization feature (V - V0)
-        if test != "DCIR":
-            voltage_cols = tests[test].filter(regex="voltage").columns
-            for v in voltage_cols:
-                tests[test][f"polarization_{v.split('_')[1]}"] = (
-                    tests[test][v] - tests[test][voltage_cols[0]]
-                )
+        # if test != "DCIR":
+        #     voltage_cols = tests[test].filter(regex="voltage").columns
+        #     for v in voltage_cols:
+        #         tests[test][f"polarization_{v.split('_')[1]}"] = (
+        #             tests[test][v] - tests[test][voltage_cols[0]]
+        #         )
 
         # Make Excess electrolyte categorical
         # le = LabelEncoder()
@@ -1803,11 +1842,13 @@ def get_charge_depleting_cycle(df, pattern_length):
             columns_voltage = ["voltage_%3.1fs" % (t)]
             columns_current = ["current_%3.1fs" % (t)]
             columns_power = ["power_%3.1fs" % (t)]
+            columns_control_power = ["control_power_%3.1fs" % (t)]
         else:
             columns_soc += ["soc_%3.1fs" % (t)]
             columns_voltage += ["voltage_%3.1fs" % (t)]
             columns_current += ["current_%3.1fs" % (t)]
             columns_power += ["power_%3.1fs" % (t)]
+            columns_control_power += ["control_power_%3.1fs" % (t)]
 
     for i, df_seg in enumerate(df_testing):
         if i == 0:
@@ -1815,6 +1856,12 @@ def get_charge_depleting_cycle(df, pattern_length):
             soc_initial = df_seg.SOC.to_numpy()[0]
             soc_final = df_seg.SOC.to_numpy()[-1]
             temperature = np.mean(df_seg["Temperature A1, °C"].to_numpy())
+            control_power = df_seg["Control Power"].to_numpy()
+            # limit_current = df_seg["Limit Current"].iloc[0]
+            # limit_voltage = df_seg["Limit Voltage"].iloc[0]
+            # limit_power = df_seg["Limit Power"].iloc[0]
+            # limit_inequality = df_seg["Limit Inequality"].iloc[0]
+
             voltage = df_seg[col_voltage].to_numpy()
             current = df_seg["Current, A"].to_numpy()
             power = df_seg["Power, W"].to_numpy()
@@ -1824,6 +1871,12 @@ def get_charge_depleting_cycle(df, pattern_length):
             soc_initial = np.vstack((soc_initial, df_seg.SOC.to_numpy()[0]))
             soc_final = np.vstack((soc_final, df_seg.SOC.to_numpy()[-1]))
             temperature = np.vstack((temperature, np.mean(df_seg["Temperature A1, °C"].to_numpy())))
+            control_power = np.vstack((control_power, df_seg["Control Power"].to_numpy()))
+            # limit_current = np.vstack((limit_current, df_seg["Limit Current"].iloc[0].to_numpy()))
+            # limit_voltage = np.vstack((limit_voltage, df_seg["Limit Voltage"].iloc[0].to_numpy()))
+            # limit_power = np.vstack((limit_power, df_seg["Limit Power"].iloc[0].to_numpy()))
+            # limit_inequality = np.vstack((limit_inequality, df_seg["Limit Inequality"].iloc[0].to_numpy()))
+
             voltage = np.vstack((voltage, df_seg[col_voltage].to_numpy()))
             current = np.vstack((current, df_seg["Current, A"].to_numpy()))
             power = np.vstack((power, df_seg["Power, W"].to_numpy()))
@@ -1834,13 +1887,30 @@ def get_charge_depleting_cycle(df, pattern_length):
         soc_initial = np.vstack((soc_initial, df_seg.SOC.to_numpy()[0]))
         soc_final = np.vstack((soc_final, df_seg.SOC.to_numpy()[-1]))
         temperature = np.vstack((temperature, np.mean(df_seg["Temperature A1, °C"].to_numpy())))
+        control_power = np.vstack((control_power, df_seg["Control Power"].to_numpy()))
+        # limit_current = np.vstack((limit_current, df_seg["Limit Current"].iloc[0].to_numpy()))
+        # limit_voltage = np.vstack((limit_voltage, df_seg["Limit Voltage"].iloc[0].to_numpy()))
+        # limit_power = np.vstack((limit_power, df_seg["Limit Power"].iloc[0].to_numpy()))
+        # limit_inequality = np.vstack((limit_inequality, df_seg["Limit Inequality"].iloc[0].to_numpy()))
+
         voltage = np.vstack((voltage, df_seg[col_voltage].to_numpy()))
         current = np.vstack((current, df_seg["Current, A"].to_numpy()))
         power = np.vstack((power, df_seg["Power, W"].to_numpy()))
         type += [['training']]
 
-    out = np.hstack((temperature, soc_mean, soc_initial, soc_final, type, voltage, current, power))
-    columns = (["temperature", "soc_mean", "soc_initial", "soc_final", "split_type"] + columns_voltage + columns_current + columns_power)
+    out = np.hstack((temperature, soc_mean, soc_initial, soc_final,
+                    #  limit_current, limit_voltage, limit_power, limit_inequality, 
+                     type, control_power,  voltage, current, power))
+    columns = (["temperature", 
+                "soc_mean", 
+                "soc_initial", 
+                "soc_final", 
+                "split_type", 
+                # "limit_current",
+                # "limit_voltage",
+                # "limit_power",
+                # "limit_inequality",
+                ] + columns_control_power + columns_voltage + columns_current + columns_power)
 
     df_out = pd.DataFrame(out, columns=columns)
 
@@ -1910,17 +1980,25 @@ def get_charge_sustaining_cycle(df, cell_id_prefix):
             columns_voltage = ["voltage_%5.1fs" % (t)]
             columns_current = ["current_%5.1fs" % (t)]
             columns_power = ["power_%5.1fs" % (t)]
+            columns_control_power = ["control_power_%5.1fs" % (t)]
         else:
             # columns_soc += ["soc_%5.1fs" % (t)]
             columns_voltage += ["voltage_%5.1fs" % (t)]
             columns_current += ["current_%5.1fs" % (t)]
             columns_power += ["power_%5.1fs" % (t)]
+            columns_control_power += ["control_power_%5.1fs" % (t)]
 
     # soc = df_seg.SOC.to_numpy()
     soc_mean = df_testing.SOC.to_numpy().mean()
     soc_initial = df_testing.SOC.to_numpy()[0]
     soc_final = df_testing.SOC.to_numpy()[-1]
     temperature = np.mean(df_testing["Temperature A1, °C"].to_numpy())
+    control_power = df_testing["Control Power"].to_numpy()
+    # limit_current = df_seg["Limit Current"].iloc[0].to_numpy()
+    # limit_voltage = df_seg["Limit Voltage"].iloc[0].to_numpy()
+    # limit_power = df_seg["Limit Power"].iloc[0].to_numpy()
+    # limit_inequality = df_seg["Limit Inequality"].iloc[0].to_numpy()
+
     voltage = df_testing[col_voltage].to_numpy()
     current = df_testing["Current, A"].to_numpy()
     power = df_testing["Power, W"].to_numpy()
@@ -1931,14 +2009,23 @@ def get_charge_sustaining_cycle(df, cell_id_prefix):
         soc_initial = np.vstack((soc_initial, row.SOC.to_numpy()[0]))
         soc_final = np.vstack((soc_final, row.SOC.to_numpy()[-1]))
         temperature = np.vstack((temperature, np.mean(row["Temperature A1, °C"].to_numpy())))
+        control_power = np.vstack((control_power, row["Control Power"].to_numpy()))
+        # limit_current = np.vstack((limit_current, row["Limit Current"].iloc[0].to_numpy()))
+        # limit_voltage = np.vstack((limit_voltage, row["Limit Voltage"].iloc[0].to_numpy()))
+        # limit_power = np.vstack((limit_power, row["Limit Power"].iloc[0].to_numpy()))
+        # limit_inequality = np.vstack((limit_inequality, row["Limit Inequality"].iloc[0].to_numpy()))
         voltage = np.vstack((voltage, row[col_voltage].to_numpy()))
         current = np.vstack((current, row["Current, A"].to_numpy()))
         power = np.vstack((power, row["Power, W"].to_numpy()))
         type += [['training']]
 
 
-    out = np.hstack((temperature, soc_mean, soc_initial, soc_final, type, voltage, current, power))
-    columns = (["temperature", "soc_mean", "soc_initial", "soc_final", "split_type"] + columns_voltage + columns_current + columns_power)
+    out = np.hstack((temperature, soc_mean, soc_initial, soc_final,
+                    #  , limit_current, limit_voltage, limit_power, limit_inequality
+                    type, control_power, voltage, current, power))
+    columns = (["temperature", "soc_mean", "soc_initial", "soc_final",
+                # "limit_current", "limit_voltage", "limit_power", "limit_inequality",
+                "split_type"] + columns_control_power + columns_voltage + columns_current + columns_power)
     df_out = pd.DataFrame(out, columns=columns)
 
     return df_out
@@ -1963,6 +2050,13 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
     voltage = df_seg[col_voltage].to_numpy()
     current = df_seg["Current, A"].to_numpy()
     power = df_seg["Power, W"].to_numpy()
+    control_current = df_seg["Control Current"].to_numpy()
+    control_voltage = df_seg["Control Voltage"].to_numpy()
+    # control_power = df_seg["Control Power"].to_numpy()
+    # limit_current = df_seg["Limit Current"].to_numpy()
+    # limit_voltage = df_seg["Limit Voltage"].to_numpy()
+    # limit_power = df_seg["Limit Power"].to_numpy()
+    # limit_inequality = df_seg["Limit Inequality"].to_numpy()
 
     out = np.vstack((soc, voltage, current, power, time))
 
@@ -1980,6 +2074,13 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
             voltage_interp = [voltage[0]]
             current_interp = [current[0]]
             power_interp = [power[0]]
+            control_current_interp = [control_current[0]]
+            control_voltage_interp = [control_voltage[0]]
+            # control_power_interp = [control_power[0]]
+            # limit_current_interp = [limit_current[0]]
+            # limit_voltage_interp = [limit_voltage[0]]
+            # limit_power_interp = [limit_power[0]]
+            # limit_inequality_interp = [limit_inequality[0]]
             time_interp = [i]
             continue
 
@@ -1994,32 +2095,59 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
         if (time_2 - time_1 > 10) or (time_1 - time_2 > 10): 
             print(f"PANIC PANIC {key} PANIC PANIC ")
 
-        # if the two closest points are already at 1 second intervals, just take the closest value
-        if (time_2 - time_1) == 1:
-            if time_2 < time_1: #time 2 is the closest point
-                soc_interp += [seg_2['SOC']]
-                voltage_interp += [seg_2[col_voltage]] 
-                current_interp += [seg_2['Current, A']]
-                power_interp += [seg_2['Power, W']]
-            else:
-                soc_interp += [seg_1['SOC']]
-                voltage_interp += [seg_1[col_voltage]] 
-                current_interp += [seg_1['Current, A']]
-                power_interp += [seg_1['Power, W']]
-            continue
+        #save the closer of the two points
+        if time_2 < time_1:
+            soc_interp += [seg_2['SOC']]
+            voltage_interp += [seg_2[col_voltage]]
+            current_interp += [seg_2['Current, A']]
+            power_interp += [seg_2['Power, W']]
+            control_current_interp += [seg_2['Control Current']]
+            control_voltage_interp += [seg_2['Control Voltage']]
+            # control_power_interp += [seg_2['Control Power']]
+            # limit_current_interp += [seg_2['Limit Current']]
+            # limit_voltage_interp += [seg_2['Limit Voltage']]
+            # limit_power_interp += [seg_2['Limit Power']]
+            # limit_inequality_interp += [seg_2['Limit Inequality']]
+        else:
+            soc_interp += [seg_1['SOC']]
+            voltage_interp += [seg_1[col_voltage]]
+            current_interp += [seg_1['Current, A']]
+            power_interp += [seg_1['Power, W']]
+            control_current_interp += [seg_1['Control Current']]
+            control_voltage_interp += [seg_1['Control Voltage']]
+            # control_power_interp += [seg_1['Control Power']]
+            # limit_current_interp += [seg_1['Limit Current']]
+            # limit_voltage_interp += [seg_1['Limit Voltage']]
+            # limit_power_interp += [seg_1['Limit Power']]
+            # limit_inequality_interp += [seg_1['Limit Inequality']]
 
-        #if the two points are within 0.3 seconds of each other, take the average
-        if (time_2 - time_1) < 0.3: 
-            soc_interp += [(seg_1['SOC'] + seg_2['SOC']) / 2]
-            voltage_interp += [(seg_1[col_voltage] + seg_2[col_voltage]) / 2]
-            current_interp += [(seg_1['Current, A'] + seg_2['Current, A']) / 2]
-            power_interp += [(seg_1['Power, W'] + seg_2['Power, W']) / 2]
-            continue
-        #finally, if the two closest points are not at 1 second intervals, interpolate
-        soc_interp += [np.interp(i, time, soc)]
-        voltage_interp += [np.interp(i, time, voltage)]
-        current_interp += [np.interp(i, time, current)]
-        power_interp += [np.interp(i, time, power)]
+
+        # if the two closest points are already at 1 second intervals, just take the closest value
+        # if (time_2 - time_1) == 1:
+        #     if time_2 < time_1: #time 2 is the closest point
+        #         soc_interp += [seg_2['SOC']]
+        #         voltage_interp += [seg_2[col_voltage]] 
+        #         current_interp += [seg_2['Current, A']]
+        #         power_interp += [seg_2['Power, W']]
+        #     else:
+        #         soc_interp += [seg_1['SOC']]
+        #         voltage_interp += [seg_1[col_voltage]] 
+        #         current_interp += [seg_1['Current, A']]
+        #         power_interp += [seg_1['Power, W']]
+        #     continue
+
+        # #if the two points are within 0.3 seconds of each other, take the average
+        # if (time_2 - time_1) < 0.3: 
+        #     soc_interp += [(seg_1['SOC'] + seg_2['SOC']) / 2]
+        #     voltage_interp += [(seg_1[col_voltage] + seg_2[col_voltage]) / 2]
+        #     current_interp += [(seg_1['Current, A'] + seg_2['Current, A']) / 2]
+        #     power_interp += [(seg_1['Power, W'] + seg_2['Power, W']) / 2]
+        #     continue
+        # #finally, if the two closest points are not at 1 second intervals, interpolate
+        # soc_interp += [np.interp(i, time, soc)]
+        # voltage_interp += [np.interp(i, time, voltage)]
+        # current_interp += [np.interp(i, time, current)]
+        # power_interp += [np.interp(i, time, power)]
 
     if time_interp[-1] < segment_length:
         print(f"Charge cycle for {cell_id_prefix}_{cell_id_num} is shorter than {segment_length} seconds, skipping")
@@ -2035,13 +2163,30 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
         voltage_sample = voltage_interp[start_time:start_time + segment_length]
         current_sample = current_interp[start_time:start_time + segment_length]
         power_sample = power_interp[start_time:start_time + segment_length]
+        control_current_sample = control_current_interp[start_time:start_time + segment_length]
+        control_voltage_sample = control_voltage_interp[start_time:start_time + segment_length]
+        # control_power_sample = control_power_interp[start_time:start_time + segment_length]
+        # limit_current_sample = limit_current_interp[start_time:start_time + segment_length]
+        # limit_voltage_sample = limit_voltage_interp[start_time:start_time + segment_length]
+        # limit_power_sample = limit_power_interp[start_time:start_time + segment_length]
+        # limit_inequality_sample = limit_inequality_interp[start_time:start_time + segment_length]
         soc_mean = np.mean(soc_interp[start_time:start_time + segment_length])
         soc_initial = soc_interp[start_time]
         soc_final = soc_interp[start_time + segment_length - 1]
         temperature_sample = np.mean(df_seg["Temperature A1, °C"].to_numpy())
 
-        out = np.hstack((temperature_sample, soc_mean, soc_initial, soc_final, voltage_sample, current_sample, power_sample))
+        out = np.hstack((temperature_sample, soc_mean, soc_initial, soc_final, control_current_sample, control_voltage_sample,
+                        #  , control_power_sample,
+                        #     limit_current_sample, limit_voltage_sample, limit_power_sample, limit_inequality_sample,
+                         voltage_sample, current_sample, power_sample))
         columns = (["temperature", "soc_mean", "soc_initial", "soc_final"] +
+                    ["control_current_%3.1fs" % (j) for j in range(segment_length)] +
+                    ["control_voltage_%3.1fs" % (j) for j in range(segment_length)] +
+                    # ["control_power_%3.1fs" % (j) for j in range(segment_length)] +
+                    # ["limit_current_%3.1fs" % (j) for j in range(segment_length)] +
+                    # ["limit_voltage_%3.1fs" % (j) for j in range(segment_length)] +
+                    # ["limit_power_%3.1fs" % (j) for j in range(segment_length)] +
+                    # ["limit_inequality_%3.1fs" % (j) for j in range(segment_length)] +
                     ["voltage_%3.1fs" % (j) for j in range(segment_length)] +
                     ["current_%3.1fs" % (j) for j in range(segment_length)] +
                     ["power_%3.1fs" % (j) for j in range(segment_length)])
@@ -2049,7 +2194,7 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
         df_out_sample = pd.Series(out, index=columns)
         if i == 0:
             df_out = pd.DataFrame([df_out_sample])
-        elif len(df_out_sample) == segment_length * 3 + 4: # make sure the sample is the correct length
+        elif len(df_out_sample) == segment_length * 5 + 4: # make sure the sample is the correct length
             df_out = pd.concat([df_out, pd.DataFrame([df_out_sample])], ignore_index=True)
         else:
             print(f"sample {i} is the wrong length, skipping")
@@ -2355,16 +2500,24 @@ def join_targets_to_features(features_raw, targets_raw_all):
         (
             "soc" in var
             or "temperature_ambient" in var
+            or "temperature" in var
             or "rate" in var
             or "direction" in var
             or "measurement_id" in var
             or "split_type" in var
+            or "segment_length" in var
             or var == "1s"
             or var == "10s"
             or var == "0p1s"
             or var == "4s"
         )
-        or ("voltage" in var or "current" in var or "temperature" in var or "power" in var)
+        or ("voltage" in var or 
+            "current" in var or 
+            "temperature" in var or 
+            "power" in var or 
+            "control_current" in var or 
+            "control_voltage" in var or
+            "control_power" in var)
         and ".0s" in var
         for var in features_raw.columns
     ]

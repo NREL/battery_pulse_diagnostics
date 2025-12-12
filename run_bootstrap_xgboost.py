@@ -29,12 +29,12 @@ if __name__ == "__main__":
 
     ################# User Parameters ####################
     # filename_raw_features = "data/data_for_ml.h5"
-    filename_raw_features = "data/data_partial_charge_for_ml.h5"
+    filename_raw_features = "data/data_partial_charge_for_ml_fixed.h5"
     filename_extracted_features = "data/data_for_ml_extracted_features.h5"
     test_size = 0.20
 
     # No. bootstrap iterations
-    n_splits = 50
+    n_splits = 25 # 50
 
     # How often to print output
     print_freq = 2
@@ -64,25 +64,33 @@ if __name__ == "__main__":
     ]
 
     partial_charge_pulses = [
-        "Charge_Depleting",
-        "Charge_Sustaining",
-        "Rate_Test_C/2",
-        "Rate_Test_1C",
-        "PsRP_1_C/2",
-        "PsRP_1_1C",
-        "PsRP_2_C/2",
-        "PsRP_2_1C",
+        # "Charge_Depleting",
+        # "Charge_Sustaining",
+        # "Rate_Test_C/2",
+        # "Rate_Test_1C",
+        # "PsRP_1_C/2",
+        # "PsRP_1_1C",
+        # "PsRP_2_C/2",
+        # "PsRP_2_1C",
+        "Charge_Sustaining_Time_Variable_15mins",
+        "Charge_Sustaining_Time_Variable_30mins",
+        "Charge_Sustaining_Time_Variable_45mins",
+        "Charge_Sustaining_Time_Variable_60mins",
+        # "PsRP_2_C/2_Time_Variable_15mins",
+        # "PsRP_2_C/2_Time_Variable_30mins",
+        # "PsRP_2_C/2_Time_Variable_45mins",
+        # "PsRP_2_C/2_Time_Variable_60mins",
     ]
 
     targets = [
         # "1C discharge capacity",
         # "C/10 discharge capacity",
         # "C/5 discharge capacity",
-        # "C/3 discharge capacity",
+        "C/3 discharge capacity",
         # "C/2 discharge capacity",
         # "P/3 discharge capacity",
-        "Charge depleting cycle charge throughput",
-        "Charge sustaining cycle charge efficiency",
+        # "Charge depleting cycle charge throughput",
+        # "Charge sustaining cycle charge efficiency",
         # "soc",
         # "soc_mean", # soc mean is only a partial charge target
         # "Post 1C charge relaxation fit MSE",
@@ -100,7 +108,7 @@ if __name__ == "__main__":
         # "Thickness growth",
     ]
 
-    for cell_type in ["D"]: #"A", "B", "C", "D"]:
+    for cell_type in ["A", "B", "C", "D"]:
 
         # Save results as a dictionary
         bootstrap_results = dict()
@@ -268,5 +276,5 @@ if __name__ == "__main__":
 
                 torch.save(
                     bootstrap_results,
-                    f"results/partial_charge/us06_fcr_cycle/bootstrap_results_{cell_type}.pth",
+                    f"results/partial_charge/fixed_cell_id/bootstrap_results_{cell_type}.pth",
                 )
