@@ -7,6 +7,10 @@ from utils.data_utils import join_targets_to_features
 import sys
 sys.path.append("../")
 
+### Duplication of code in 05_process_data_for_ml.py to read partial charge csvs into h5 file
+
+### Authored by Ethan Tenney, SULI intern Fall 2025
+
 # Features
 features_charge_depleting = pd.read_csv("data/features_partial_charge_v2_depleting_cycles.csv")
 features_charge_sustaining = pd.read_csv("data/features_partial_charge_v2_sustaining_cycles.csv")

@@ -9,6 +9,12 @@ import re
 import sys
 sys.path.append("../")
 
+### Duplication of code in 02_extract_pulses.py to extract partial charge curves
+### Could be refactored to avoid code duplication. Move to base directory to run correctly.
+
+### Authored by Ethan Tenney, SULI intern Fall 2025
+
+
 hdf = pd.HDFStore("data/data_raw_with_boundary_conditions.h5", mode="r")
 keys = hdf.keys()
 

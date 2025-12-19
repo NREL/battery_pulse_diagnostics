@@ -282,7 +282,7 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
     psrp_1_1C = data.get("PsRP_1_1C")
     psrp_2_C2 = data.get("PsRP_2_C/2")
     psrp_2_1C = data.get("PsRP_2_1C")
-    psrp_2_C2_time_variable = data.get("PsRP_2_C/2_Time_Variable")
+    # psrp_2_C2_time_variable = data.get("PsRP_2_C/2_Time_Variable")
 
     if cell_type is not None:
         charge_depleting = filter_cell_type(charge_depleting, cell_type)
@@ -301,12 +301,10 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
 
     # get 1/10 of the randomized samples for use in the model.
     depleting_testing = charge_depleting[charge_depleting['split_type'] == "testing"]
-    # depleting_training = charge_depleting.groupby(by='measurement_id').sample(frac=0.1, random_state=42)
     depleting_training = charge_depleting[charge_depleting['split_type'] == "training"]
     charge_depleting = pd.concat([depleting_testing, depleting_training])
     charge_depleting.reset_index(drop=True, inplace=True)
     sustaining_testing = charge_sustaining[charge_sustaining['split_type'] == "testing"]
-    # sustaining_training = charge_sustaining.groupby(by='measurement_id').sample(frac=0.1, random_state=42)
     sustaining_training = charge_sustaining[charge_sustaining['split_type'] == "training"]
     charge_sustaining = pd.concat([sustaining_testing, sustaining_training])
     charge_sustaining.reset_index(drop=True, inplace=True)
@@ -385,22 +383,6 @@ def load_partial_charge_data(filename: str = "data_partial_charge_for_ml.h5", ce
 
         # Give each row a unique "sample_id"
         tests[test]["sample_id"] = tests[test].index
-
-        # Add polarization feature (V - V0)
-        # if test != "DCIR":
-        #     voltage_cols = tests[test].filter(regex="voltage").columns
-        #     for v in voltage_cols:
-        #         tests[test][f"polarization_{v.split('_')[1]}"] = (
-        #             tests[test][v] - tests[test][voltage_cols[0]]
-        #         )
-
-        # Make Excess electrolyte categorical
-        # le = LabelEncoder()
-        # mask = tests[test]["Excess electrolyte"].isna()
-        # tests[test]["Excess electrolyte"] = le.fit_transform(
-        #     tests[test]["Excess electrolyte"]
-        # )
-        # tests[test]["Excess electrolyte"][mask] = np.nan
 
         # Add C/3 discharge * SOC target
         c_3_discharge = tests[test]["C/3 discharge capacity"]
@@ -1813,9 +1795,6 @@ def get_charge_depleting_cycle(df, pattern_length):
     dfs = get_10_min_segments(df[is_cycle], t_length=pattern_length)
     time = dfs[0]['Segment Time, S']
 
-    # mask_priorvoltage = [False] * len(is_cycle) # not sure this is needed
-    # len(is_cycle) - len(mask_priorvoltage)
-
     df_testing = []
     df_training = []
 
@@ -1856,7 +1835,7 @@ def get_charge_depleting_cycle(df, pattern_length):
             soc_initial = df_seg.SOC.to_numpy()[0]
             soc_final = df_seg.SOC.to_numpy()[-1]
             temperature = np.mean(df_seg["Temperature A1, °C"].to_numpy())
-            control_power = df_seg["Control Power"].to_numpy()
+            control_power = df_seg["Control Power"].to_numpy() # Sustaining and depleting are controled by power and not current or voltage
             # limit_current = df_seg["Limit Current"].iloc[0]
             # limit_voltage = df_seg["Limit Voltage"].iloc[0]
             # limit_power = df_seg["Limit Power"].iloc[0]
@@ -1931,10 +1910,6 @@ def get_charge_sustaining_cycle(df, cell_id_prefix):
     df_seg = df[is_cycle]
     # time = df_seg['Segment Time, S']
     time = retime(df_seg)['Segment Time, S']
-
-    # mask_priorvoltage = [False] * len(is_cycle) # not sure this is needed
-    # len(is_cycle) - len(mask_priorvoltage)
-
     
 
     if cell_id_prefix.startswith('A') or cell_id_prefix.startswith('B'):
@@ -1993,7 +1968,7 @@ def get_charge_sustaining_cycle(df, cell_id_prefix):
     soc_initial = df_testing.SOC.to_numpy()[0]
     soc_final = df_testing.SOC.to_numpy()[-1]
     temperature = np.mean(df_testing["Temperature A1, °C"].to_numpy())
-    control_power = df_testing["Control Power"].to_numpy()
+    control_power = df_testing["Control Power"].to_numpy() # Sustaining and depleting are controled by power and not current or voltage
     # limit_current = df_seg["Limit Current"].iloc[0].to_numpy()
     # limit_voltage = df_seg["Limit Voltage"].iloc[0].to_numpy()
     # limit_power = df_seg["Limit Power"].iloc[0].to_numpy()
@@ -2121,34 +2096,6 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
             # limit_power_interp += [seg_1['Limit Power']]
             # limit_inequality_interp += [seg_1['Limit Inequality']]
 
-
-        # if the two closest points are already at 1 second intervals, just take the closest value
-        # if (time_2 - time_1) == 1:
-        #     if time_2 < time_1: #time 2 is the closest point
-        #         soc_interp += [seg_2['SOC']]
-        #         voltage_interp += [seg_2[col_voltage]] 
-        #         current_interp += [seg_2['Current, A']]
-        #         power_interp += [seg_2['Power, W']]
-        #     else:
-        #         soc_interp += [seg_1['SOC']]
-        #         voltage_interp += [seg_1[col_voltage]] 
-        #         current_interp += [seg_1['Current, A']]
-        #         power_interp += [seg_1['Power, W']]
-        #     continue
-
-        # #if the two points are within 0.3 seconds of each other, take the average
-        # if (time_2 - time_1) < 0.3: 
-        #     soc_interp += [(seg_1['SOC'] + seg_2['SOC']) / 2]
-        #     voltage_interp += [(seg_1[col_voltage] + seg_2[col_voltage]) / 2]
-        #     current_interp += [(seg_1['Current, A'] + seg_2['Current, A']) / 2]
-        #     power_interp += [(seg_1['Power, W'] + seg_2['Power, W']) / 2]
-        #     continue
-        # #finally, if the two closest points are not at 1 second intervals, interpolate
-        # soc_interp += [np.interp(i, time, soc)]
-        # voltage_interp += [np.interp(i, time, voltage)]
-        # current_interp += [np.interp(i, time, current)]
-        # power_interp += [np.interp(i, time, power)]
-
     if time_interp[-1] < segment_length:
         print(f"Charge cycle for {cell_id_prefix}_{cell_id_num} is shorter than {segment_length} seconds, skipping")
         return None
@@ -2202,6 +2149,7 @@ def get_charge_cycle(df, cell_id_prefix, cell_id_num, key, segment_length):
     return df_out
 
 def get_charge_sustaining_cycle_time_variable(df, cell_id_prefix):
+    # experiment with differnt lengths of charge sustaining cycle segments
     if any(["Cell Voltage A1" in col for col in df.columns]):
         col_voltage = "Cell Voltage A1, V"
     else:
@@ -2257,14 +2205,6 @@ def get_charge_sustaining_cycle_time_variable(df, cell_id_prefix):
         segs_60
     ]
 
-
-    # # save last 30 mins (1800s) of data separately
-    # thirty_mins = int(1800 / resolution)
-    # df_testing = retime(df_seg[-thirty_mins:])
-
-    # df_seg.drop(df_seg.index[-thirty_mins:], inplace=True)
-    # df_seg.reset_index(drop=True, inplace=True)
-    # df_seg = retime(df_seg)
     for (j, df_time_samples), (key, length) in zip(enumerate(df_segments), segment_lengths.items()):
         for i in range(5):
             start_time = np.random.randint(0, len(df_seg) - length) # random start time for segment
@@ -2322,6 +2262,7 @@ def get_charge_sustaining_cycle_time_variable(df, cell_id_prefix):
     return df_out
 
 def get_charge_cycle_time_variable(df, cell_id_prefix, cell_id_num, key):
+    # experiment with differnt lengths of charge cycle segments
 
     # For a measurement, return collated data from the charge cycle
     if any(["Cell Voltage A1" in col for col in df.columns]):
@@ -2385,33 +2326,6 @@ def get_charge_cycle_time_variable(df, cell_id_prefix, cell_id_num, key):
         if (time_2 - time_1 > 10) or (time_1 - time_2 > 10): 
             print(f"PANIC PANIC {key} PANIC PANIC ")
 
-        # if the two closest points are already at 1 second intervals, just take the closest value
-        # if (time_2 - time_1) == 1:
-        #     if time_2 < time_1: #time 2 is the closest point
-        #         soc_interp += [seg_2['SOC']]
-        #         voltage_interp += [seg_2[col_voltage]] 
-        #         current_interp += [seg_2['Current, A']]
-        #         power_interp += [seg_2['Power, W']]
-        #     else:
-        #         soc_interp += [seg_1['SOC']]
-        #         voltage_interp += [seg_1[col_voltage]] 
-        #         current_interp += [seg_1['Current, A']]
-        #         power_interp += [seg_1['Power, W']]
-        #     continue
-
-        # #if the two points are within 0.3 seconds of each other, take the average
-        # if (time_2 - time_1) < 0.3: 
-        #     soc_interp += [(seg_1['SOC'] + seg_2['SOC']) / 2]
-        #     voltage_interp += [(seg_1[col_voltage] + seg_2[col_voltage]) / 2]
-        #     current_interp += [(seg_1['Current, A'] + seg_2['Current, A']) / 2]
-        #     power_interp += [(seg_1['Power, W'] + seg_2['Power, W']) / 2]
-        #     continue
-        # #finally, if the two closest points are not at 1 second intervals, interpolate
-        # soc_interp += [np.interp(i, time, soc)]
-        # voltage_interp += [np.interp(i, time, voltage)]
-        # current_interp += [np.interp(i, time, current)]
-        # power_interp += [np.interp(i, time, power)]
-
     segment_lengths = {
         "fifteen_mins": 900,
         "thirty_mins": 1800,
@@ -2465,23 +2379,11 @@ def get_charge_cycle_time_variable(df, cell_id_prefix, cell_id_num, key):
             else:
                 print(f"sample {i} is the wrong length, skipping")
 
-            # if i == 0:
-            #     df_out = pd.DataFrame([df_out_sample])
-            # elif len(df_out_sample) == segment_length * 3 + 5: # make sure the sample is the correct length
-            #     df_out = pd.concat([df_out, pd.DataFrame([df_out_sample])], ignore_index=True)
-            # else:
-            #     print(f"sample {i} is the wrong length, skipping")
-
         columns = (["temperature", "soc_mean", "soc_initial", "soc_final", "segment_length"] +
             ["voltage_%3.1fs" % (j) for j in range(segment_length)] +
             ["current_%3.1fs" % (j) for j in range(segment_length)] +
             ["power_%3.1fs" % (j) for j in range(segment_length)])
 
-        # if j == 0:
-        #     df_out = pd.DataFrame(df_time_samples, columns=columns)
-        # else:
-        #     df_out = pd.concat([df_out, pd.DataFrame(df_time_samples, columns=columns)], ignore_index=True)
-    
         # df_time_samples = pd.DataFrame(df_time_samples, columns=columns)
         df_results.append(pd.DataFrame(df_time_samples, columns=columns))
     # out = np.vstack(df_time_samples)

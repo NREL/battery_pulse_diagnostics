@@ -5,7 +5,7 @@ to here as "bootstrapping".
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.model_selection import GroupShuffleSplit
 import torch
 from xgboost import XGBRegressor, XGBClassifier
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     test_size = 0.20
 
     # No. bootstrap iterations
-    n_splits = 25 # 50
+    n_splits = 5 # 50
 
     # How often to print output
     print_freq = 2
@@ -64,18 +64,18 @@ if __name__ == "__main__":
     ]
 
     partial_charge_pulses = [
-        # "Charge_Depleting",
-        # "Charge_Sustaining",
-        # "Rate_Test_C/2",
+        "Charge_Depleting",
+        "Charge_Sustaining",
+        "Rate_Test_C/2",
         # "Rate_Test_1C",
         # "PsRP_1_C/2",
         # "PsRP_1_1C",
-        # "PsRP_2_C/2",
+        "PsRP_2_C/2",
         # "PsRP_2_1C",
-        "Charge_Sustaining_Time_Variable_15mins",
-        "Charge_Sustaining_Time_Variable_30mins",
-        "Charge_Sustaining_Time_Variable_45mins",
-        "Charge_Sustaining_Time_Variable_60mins",
+        # "Charge_Sustaining_Time_Variable_15mins",
+        # "Charge_Sustaining_Time_Variable_30mins",
+        # "Charge_Sustaining_Time_Variable_45mins",
+        # "Charge_Sustaining_Time_Variable_60mins",
         # "PsRP_2_C/2_Time_Variable_15mins",
         # "PsRP_2_C/2_Time_Variable_30mins",
         # "PsRP_2_C/2_Time_Variable_45mins",
@@ -123,8 +123,29 @@ if __name__ == "__main__":
 
                 r2s = []
                 maes = []
+
+                train_mse = []
+                test_mse = []
+
                 df = tests[pulse]
                 df = df[df[target].notna()]
+
+                #normalize data
+                voltage_min = df.filter(regex="voltage").min().min()
+                voltage_max = df.filter(regex="voltage").max().max()
+                current_min = df.filter(regex="current").min().min()
+                current_max = df.filter(regex="current").max().max()
+                power_min = df.filter(regex="power").min().min()
+                power_max = df.filter(regex="power").max().max()
+
+                target_min = df[target].min()
+                target_max = df[target].max()
+
+                df.filter(regex="voltage").loc[:] = (df.filter(regex="voltage") - voltage_min) / (voltage_max - voltage_min)
+                df.filter(regex="current").loc[:] = (df.filter(regex="current") - current_min) / (current_max - current_min)
+                df.filter(regex="power").loc[:] = (df.filter(regex="power") - power_min) / (power_max - power_min)
+
+                df[target].loc[:] = (df[target] - target_min) / (target_max - target_min)
 
                 # Keep only the identifier columns: cell_id, measurement_id,
                 # temp, rate, etc. This is a little clunky but since the
@@ -251,6 +272,7 @@ if __name__ == "__main__":
                         )
                         preds = xgb.predict(test.filter(regex=regex))
                         # preds = xgb.predict(test_filter) # Use this line instead to run baseline model
+                        
 
                     # Save predicted value per cell
                     test_cells = test[["sample_id"]]
@@ -260,6 +282,14 @@ if __name__ == "__main__":
                     r2s.append(r2_score(test[target], preds))
                     maes.append(mean_absolute_error(test[target], preds))
 
+                    train_error = mean_squared_error(train[target], xgb.predict(train.filter(regex=regex)))
+                    test_error = mean_squared_error(test[target], preds)
+
+                    train_mse.append(train_error)
+                    test_mse.append(test_error)
+                    # print("train_mse:", train_error)
+                    # print("test_mse:", test_error)
+
                 print(
                     "\tr2 score: mean = %0.4f, std = %0.4f"
                     % (np.mean(r2s), np.std(r2s))
@@ -268,7 +298,14 @@ if __name__ == "__main__":
                     "\tmae score: mean = %0.4f, std = %0.4f"
                     % (np.mean(maes), np.std(maes))
                 )
-
+                print(
+                    "\tmse train score: mean = %0.4f, std = %0.4f"
+                    % (np.mean(train_mse), np.std(train_mse))
+                )
+                print(
+                    "\tmse test score: mean = %0.4f, std = %0.4f"
+                    % (np.mean(test_mse), np.std(test_mse))
+                )
                 bootstrap_results[f"{target}, {pulse}"] = results
                 bootstrap_results[
                     f"{target}, {pulse}, features_per_iteration"
@@ -276,5 +313,5 @@ if __name__ == "__main__":
 
                 torch.save(
                     bootstrap_results,
-                    f"results/partial_charge/fixed_cell_id/bootstrap_results_{cell_type}.pth",
+                    f"results/neural_network/c_testing/bootstrap_results_{cell_type}.pth",
                 )
